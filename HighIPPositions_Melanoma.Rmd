@@ -1,0 +1,142 @@
+---
+title: "Melanoma_HighIP_Location"
+author: "Disha"
+date: "2023-11-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
+```{r}
+library(hdf5r)
+library(Seurat)
+library(SeuratData)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(Matrix)
+library(rhdf5)
+```
+
+
+```{r}
+#Loading the spatial data that has IP scores integrated
+Spatial_dir <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/Melanoma_Spatial/hdf5"
+MelanomaIP <- Load10X_Spatial(
+  data.dir=Spatial_dir,
+  filename = "IPfinal.h5",
+  assay = "Spatial")
+```
+
+
+```{r}
+#Sanity check- to check if the data is normalized and whether it is correct or not
+SpatialFeaturePlot(MelanomaIP, features = c("S100B", "Immunoproteasome",  "CD3D"))
+```
+
+
+```{r}
+#Storing the normalized data in a count matrix
+Count_Matrix <- MelanomaIP[["Spatial"]]@data
+Count_Matrix
+```
+```{r}
+Melanoma_count <- t(Count_Matrix)
+Melanoma_count <- as.data.frame(Melanoma_count)
+Melanoma_count
+```
+
+
+```{r}
+# Calculate the 75th percentile of 'Immunoproteasome'
+percentile_75 <- quantile(Melanoma_count$Immunoproteasome, 0.75)
+
+# Subset the data frame based on the condition
+high_immuno <- Melanoma_count[Melanoma_count$Immunoproteasome >= percentile_75, ]
+
+# Print the resulting data frame
+print(high_immuno)
+```
+
+
+```{r}
+high_immuno <- t(high_immuno)
+#converting the immunoproteasome dataset into a sparse matrix
+ipsparse <- as(high_immuno, "sparseMatrix")
+ipsparse <- as(ipsparse, "TsparseMatrix")
+ipsparse
+```
+
+
+```{r}
+library(DropletUtils)
+gene.id <- rownames(ipsparse)
+spatialIPhdf5_dir <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/Melanoma_Spatial/hdf5/HighIP.h5"
+```
+
+
+```{r}
+#creating a file in the format created by the CellRanger software suite
+
+write10xCounts(
+  spatialIPhdf5_dir,
+  ipsparse,
+  barcodes = colnames(ipsparse),
+  gene.id = rownames(ipsparse),
+  gene.symbol = gene.id,
+  gene.type = "Gene Expression",
+  overwrite = FALSE,
+  type =  "HDF5",
+  genome = "unknown",
+  version = c("2", "3"),
+  chemistry = "Single Cell 2' 2",
+  original.gem.groups = 1L,
+  library.ids = "custom"
+)
+```
+
+```{r}
+Spatial_dir <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/Melanoma_Spatial/hdf5"
+MelanomaIP <- Load10X_Spatial(
+  data.dir=Spatial_dir,
+  filename = "HighIP.h5",
+  assay = "Spatial")
+```
+
+```{r}
+#Sanity check
+SpatialFeaturePlot(MelanomaIP, features = c("S100B", "Immunoproteasome",  "CD3D"))
+```
+
+```{r}
+# Access spatial coordinates
+spatial_coordinates <- SpatialCoord(MelanomaIP)
+
+# Extract x and y coordinates
+x_coordinates <- spatial_coordinates[, 1]
+y_coordinates <- spatial_coordinates[, 2]
+
+# Combine x and y coordinates into a data frame
+coordinates_df <- data.frame(x = x_coordinates, y = y_coordinates)
+
+# Print or use the coordinates_df as needed
+print(coordinates_df)
+```
+
+
+```{r}
+Coordinates_HighIP <- GetTissueCoordinates(
+  MelanomaIP)
+```
+
+```{r}
+Coordinates_HighIP
+```
+
