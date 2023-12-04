@@ -1,0 +1,349 @@
+---
+title: "ST_PSMB_Melanoma"
+author: "Disha"
+date: "2023-10-18"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+```{r}
+library(hdf5r)
+library(Seurat)
+library(SeuratData)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(Matrix)
+library(rhdf5)
+```
+
+
+```{r}
+setwd("C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/Spatial")
+
+posmelanoma <- read.csv("tissue_positions.csv")
+```
+
+```{r}
+filposmelanoma <- posmelanoma[posmelanoma$in_tissue==1, ]
+```
+
+```{r}
+Spatial_dir <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial"
+Melanoma <- Load10X_Spatial(
+  data.dir=Spatial_dir,
+  filename = "CytAssist_FFPE_Human_Skin_Melanoma_filtered_feature_bc_matrix.h5",
+  assay = "Spatial")
+```
+
+```{r}
+Melanoma
+```
+
+```{r}
+# Get cell and feature names, and total numbers
+colnames(x = Melanoma)
+Cells(object = Melanoma)
+rownames(x = Melanoma)
+ncol(x = Melanoma)
+nrow(x = Melanoma)
+```
+
+```{r}
+# Access the count matrix from the Spatial assay
+count_matrix <- Melanoma[["Spatial"]]@counts
+
+# Check the dimensions of the count matrix
+dim(count_matrix)
+```
+
+```{r}
+Melanoma <- SCTransform(Melanoma, assay = "Spatial", verbose = FALSE)
+```
+
+```{r}
+# Define the features to filter
+features_to_filter <- c("PSMB8", "PSMB9", "PSMB10", "CD3D", "S100B")
+
+# Filter the Seurat spatial object based on features
+filtered_Melanoma <- Melanoma[features_to_filter, ]
+```
+
+```{r}
+filtered_Melanoma
+```
+
+```{r}
+count_matrix <- filtered_Melanoma[["Spatial"]]@counts
+```
+
+```{r}
+print(count_matrix)
+```
+
+```{r}
+Melanoma_count <- t(count_matrix)
+#print(Melanoma_count)
+```
+
+```{r}
+Melanoma_count <- as.data.frame(Melanoma_count)
+```
+
+```{r}
+Melanoma_count
+```
+
+```{r}
+Melanoma_count$Immunoproteasome <- rowMeans(Melanoma_count[, c('PSMB8', 'PSMB9', 'PSMB10')], na.rm = TRUE)
+
+```
+
+```{r}
+Melanoma_count
+```
+
+
+```{r}
+Melanoma_count <- Melanoma_count[ ,c("CD3D", "Immunoproteasome", "S100B"), drop = FALSE]
+```
+
+
+```{r}
+#Reading the original matrix to understand the format of the matrix
+mtx_file_path <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/CytAssist_FFPE_Human_Skin_Melanoma_filtered_feature_bc_matrix/filtered_feature_bc_matrix/matrix.mtx/matrix.mtx"  
+matrix_data <- readMM(mtx_file_path)
+```
+
+```{r}
+matrix_data
+```
+```{r}
+dim(Melanoma_count)
+```
+
+```{r}
+Melanoma_count <- t(Melanoma_count)
+```
+
+```{r}
+#converting the immunoproteasome dataset into a sparse matrix
+ipsparse <- as(Melanoma_count, "sparseMatrix")
+ipsparse <- as(ipsparse, "TsparseMatrix")
+ipsparse
+```
+
+```{r}
+dim(ipsparse)
+```
+```{r}
+matrix <- ipsparse
+dim(matrix)
+```
+
+
+```{r}
+mtx_file_path <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/IP data/matrix.mtx/matrix.mtx"
+
+writeMM(matrix, file = mtx_file_path)
+```
+
+
+```{r}
+features_sp <- read.table("C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/CytAssist_FFPE_Human_Skin_Melanoma_filtered_feature_bc_matrix/filtered_feature_bc_matrix/features.tsv/features.tsv", sep = "\t", header = FALSE)
+```
+
+```{r}
+dim(features_sp)
+```
+```{r}
+feature_ip <- t(features_sp)
+```
+
+```{r}
+dim(feature_ip)
+```
+```{r}
+feature_ip
+```
+
+```{r}
+feature_ip <- feature_ip[ , c(10359, 18086), drop=FALSE]
+```
+
+
+```{r}
+feature_ip <- t(feature_ip)
+```
+
+```{r}
+tsv_file_path <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/IP data/features.tsv/features.tsv"
+
+write.table(feature_ip, file = tsv_file_path, sep = "\t", row.names = FALSE)
+```
+
+```{r}
+# Read features.tsv
+features <- read.table("C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/IP data/features.tsv/features.tsv", header = TRUE, sep = "\t")
+
+# Read barcodes.tsv
+barcodes <- read.table("C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/IP data/barcodes.tsv/barcodes.tsv", sep = "\t")
+
+matrix_data <- readMM("C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/IP data/matrix.mtx/matrix.mtx")
+```
+
+
+```{r}
+wd <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/IP data"
+setwd(wd) 
+```
+
+
+```{r}
+# Create hdf5 file
+h5createFile("IPSpatial.h5")
+```
+
+```{r}
+h5createGroup("IPSpatial.h5", "matrix")
+```
+
+
+```{r}
+h5ls("IPSpatial.h5")
+```
+```{r}
+h5write(barcodes, file = "IPspatial.h5", name="matrix/barcodes")
+```
+
+
+```{r}
+h5ls("IPSpatial.h5")
+```
+```{r}
+h5write(features, file = "IPspatial.h5", name="matrix/features")
+```
+
+
+```{r}
+h5write(matrix_data, file = "IPspatial.h5", name="matrix/data")
+```
+```{r}
+install.packages("remotes")
+remotes::install_github("MarioniLab/DropletUtils")
+```
+```{r}
+library(DropletUtils)
+```
+
+```{r}
+gene.id <- rownames(ipsparse)
+```
+
+```{r}
+spatialIPhdf5_dir <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/hdf5/IPfinal.h5"
+```
+
+```{r}
+#creating a file in the format created by the CellRanger software suite
+
+write10xCounts(
+  spatialIPhdf5_dir,
+  ipsparse,
+  barcodes = colnames(ipsparse),
+  gene.id = rownames(ipsparse),
+  gene.symbol = gene.id,
+  gene.type = "Gene Expression",
+  overwrite = FALSE,
+  type =  "HDF5",
+  genome = "unknown",
+  version = c("2", "3"),
+  chemistry = "Single Cell 2' 2",
+  original.gem.groups = 1L,
+  library.ids = "custom"
+)
+```
+
+
+```{r}
+
+csv_file_path <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/IP.csv"
+
+# Use write.csv to save the DataFrame as a CSV file
+write.csv(Melanoma_count, file = csv_file_path)
+
+```
+
+```{r}
+data.frame(rownames(Melanoma_count))
+```
+
+
+```{r}
+Melanoma_count_matrix_full <- Melanoma[["Spatial"]]@counts
+dim(Melanoma_count_matrix_full)
+```
+```{r}
+Melanoma_count_matrix_full <- t(Melanoma_count_matrix_full)
+Melanoma_count_matrix_full
+```
+
+```{r}
+#merging the immunoproteasome score with the Melanoma counts matrix
+Merged_Melanoma_counts <- RowMergeSparseMatrices(Melanoma_count_matrix_full, ipsparse)
+```
+
+
+```{r}
+Merged_Melanoma_counts <- t(Merged_Melanoma_counts)
+```
+
+```{r}
+Merged_Melanoma_counts
+```
+
+```{r}
+Spatial_dir <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/hdf5"
+MelanomaIP <- Load10X_Spatial(
+  data.dir=Spatial_dir,
+  filename = "IPfinal.h5",
+  assay = "Spatial")
+```
+
+
+```{r}
+#new_gene_name <- "Immunoproteasome"
+Melanoma[["Spatial"]] <- Merged_Melanoma_counts
+
+```
+
+
+
+```{r}
+Melanoma[["Spatial"]]@counts <- Merged_Melanoma_counts
+```
+
+```{r}
+Melanoma
+
+
+```
+
+
+```{r}
+SpatialFeaturePlot(MelanomaIP, features = c("S100B", "Immunoproteasome",  "CD3D"))
+```
+
+```{r}
+Melanoma[["Spatial"]]@counts
+```
+
