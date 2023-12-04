@@ -1,0 +1,151 @@
+---
+title: "ST_Immunoproteasome_Melanoma"
+author: "Disha"
+date: "2023-11-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+```{r}
+library(hdf5r)
+library(Seurat)
+library(SeuratData)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(Matrix)
+library(rhdf5)
+```
+
+
+```{r}
+Spatial_dir <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/OC_Spatial"
+SpatialData <- Load10X_Spatial(
+  data.dir=Spatial_dir,
+  filename = "CytAssist_11mm_FFPE_Human_Ovarian_Carcinoma_filtered_feature_bc_matrix.h5",
+  assay = "Spatial")
+```
+
+```{r}
+SpatialData
+```
+
+
+```{r}
+plot1 <- VlnPlot(SpatialData, features = "nCount_Spatial", pt.size = 0.1) + NoLegend()
+plot2 <- SpatialFeaturePlot(SpatialData, features = "nCount_Spatial") + theme(legend.position = "right")
+wrap_plots(plot1, plot2)
+```
+
+
+```{r}
+SpatialData_Normalized <- SCTransform(SpatialData, assay = "Spatial", verbose = FALSE)
+```
+
+
+```{r}
+#Sanity check
+SpatialFeaturePlot(SpatialData_Normalized, features = c( "WT1", "PAX8", "MUC16"))
+```
+
+
+```{r}
+# Define the features to filter
+features_to_filter <- c("PSMB8", "PSMB9", "PSMB10", "CD3D", "PAX8")
+
+# Filter the Seurat spatial object based on features
+filtered_Spatial <- SpatialData_Normalized[features_to_filter, ]
+```
+
+
+```{r}
+filtered_Spatial
+```
+
+
+```{r}
+count_matrix <- filtered_Spatial[["SCT"]]@data
+count_matrix
+```
+
+
+```{r}
+Spatial_count <- t(count_matrix)
+```
+
+
+```{r}
+Spatial_count <- as.data.frame(Spatial_count)
+```
+
+
+```{r}
+Spatial_count
+```
+
+```{r}
+Spatial_count$Immunoproteasome <- rowMeans(Spatial_count[, c('PSMB8', 'PSMB9', 'PSMB10')], na.rm = TRUE)
+Spatial_count
+```
+
+
+```{r}
+Spatial_count <- Spatial_count[ ,c("CD3D", "Immunoproteasome", "PAX8"), drop = FALSE]
+Spatial_count <- t(Spatial_count)
+
+#converting the immunoproteasome dataset into a sparse matrix
+ipsparse <- as(Spatial_count, "sparseMatrix")
+ipsparse <- as(ipsparse, "TsparseMatrix")
+ipsparse
+```
+
+
+```{r}
+library(DropletUtils)
+gene.id <- rownames(ipsparse)
+spatialIPhdf5_dir <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/OC_Spatial/IPfinal.h5"
+```
+
+
+```{r}
+#creating a file in the format created by the CellRanger software suite
+
+write10xCounts(
+  spatialIPhdf5_dir,
+  ipsparse,
+  barcodes = colnames(ipsparse),
+  gene.id = rownames(ipsparse),
+  gene.symbol = gene.id,
+  gene.type = "Gene Expression",
+  overwrite = FALSE,
+  type =  "HDF5",
+  genome = "unknown",
+  version = c("2", "3"),
+  chemistry = "Single Cell 2' 2",
+  original.gem.groups = 1L,
+  library.ids = "custom"
+)
+```
+
+```{r}
+Spatial_dir <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/OC_Spatial"
+MelanomaIP <- Load10X_Spatial(
+  data.dir=Spatial_dir,
+  filename = "IPfinal.h5",
+  assay = "Spatial")
+```
+
+
+```{r}
+SpatialFeaturePlot(MelanomaIP, features = c("PAX8", "Immunoproteasome",  "CD3D"))
+```
+
