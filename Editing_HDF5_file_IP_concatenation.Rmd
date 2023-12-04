@@ -1,0 +1,67 @@
+---
+title: "Concatenating IP with HDF5"
+author: "Disha"
+date: "2023-10-26"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
+
+```{r}
+install.packages("hdf5")
+```
+
+
+```{r}
+library(hdf5r)
+
+```
+
+
+```{r}
+hdf5_file_path <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/filtered_feature_bc_matrix.h5"  
+
+# Open the HDF5 file in write mode
+hdf5_file <- h5file(hdf5_file_path, "r+")
+
+```
+
+
+```{r}
+
+sparse_matrix_path <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial/IP.csv"  
+
+# Load the sparse matrix
+sparse_matrix <- read.csv(sparse_matrix_path, header = TRUE)
+
+```
+
+
+```{r}
+# Assuming the barcodes are in column 1 and scores in column 2 of the sparse matrix
+matching_barcodes <- sparse_matrix[1, ]
+immunoproteasome_scores <- sparse_matrix[2, ]
+
+# Assuming that the HDF5 file has a dataset named "$barcodes"
+hdf5_file$barcodes[] <- matching_barcodes
+
+# Create a new dataset "$immunoproteasome_scores" and add the scores
+hdf5_file$immunoproteasome_scores <- immunoproteasome_scores
+
+# Optionally, add a description or metadata to the new dataset
+attr(hdf5_file$immunoproteasome_scores, "description") <- "Immunoproteasome scores"
+
+# Save the changes and close the HDF5 file
+hdf5_file[] <- NULL
+close(hdf5_file)
+
+```
+
