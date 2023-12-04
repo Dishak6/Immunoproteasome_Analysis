@@ -1,0 +1,53 @@
+---
+title: "ST_BRCA"
+author: "Disha"
+date: "2023-10-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
+
+
+```{r}
+library(hdf5r)
+library(Seurat)
+library(SeuratData)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+```
+
+```{r}
+Spatial_dir <- "C:/Users/Lenovo/Desktop/Sabari_Lab/BRCA_Spatial_10x"
+BRCA <- Load10X_Spatial(
+  data.dir=Spatial_dir,
+  filename = "filtered_feature_bc_matrix.h5",
+  assay = "Spatial")
+```
+
+```{r}
+plot1 <- VlnPlot(BRCA, features = "nCount_Spatial", pt.size = 0.1) + NoLegend()
+plot2 <- SpatialFeaturePlot(BRCA, features = "nCount_Spatial") + theme(legend.position = "right")
+wrap_plots(plot1, plot2)
+```
+
+```{r}
+BRCA <- SCTransform(BRCA, assay = "Spatial", verbose = FALSE)
+```
+
+```{r}
+SpatialFeaturePlot(BRCA, features = c("ERBB2", "PSMB8", "CD3D"), pt.size.factor = 3)
+```
+
+
+```{r}
+SpatialFeaturePlot(BRCA, features = c("ERBB2", "PSMB8", "CD8A"), pt.size.factor = 3)
+```
