@@ -1,0 +1,73 @@
+---
+title: "ST_Immunoproteasome_Melanoma"
+author: "Disha"
+date: "2023-11-02"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
+```{r}
+##This code filters immunoproteasome genes from the spatial matrix data. 
+```
+
+```{r}
+library(hdf5r)
+library(Seurat)
+library(SeuratData)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(Matrix)
+library(rhdf5)
+```
+
+
+```{r}
+Spatial_dir <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial"
+Melanoma <- Load10X_Spatial(
+  data.dir=Spatial_dir,
+  filename = "CytAssist_FFPE_Human_Skin_Melanoma_filtered_feature_bc_matrix.h5",
+  assay = "Spatial")
+```
+
+
+```{r}
+Melanoma_normalized <- SCTransform(Melanoma, assay = "Spatial", verbose = FALSE)
+```
+
+
+```{r}
+SpatialFeaturePlot(Melanoma_normalized, features = "S100B")
+```
+
+```{r}
+count_matrix <- Melanoma_normalized[["SCT"]]@data
+```
+
+```{r}
+count_matrix
+```
+
+
+```{r}
+# Define the genes to filter
+genes_to_filter <- c("PSMB8", "PSMB9", "PSMB10", "CD3D", "S100B")
+
+# Filter the Seurat spatial object based on genes
+filtered_Melanoma <- count_matrix[genes_to_filter, ]
+```
+
+
+```{r}
+filtered_Melanoma
+```
+
+
