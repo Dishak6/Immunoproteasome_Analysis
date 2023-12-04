@@ -1,0 +1,111 @@
+---
+title: "ST_Melanoma"
+author: "Disha"
+date: "2023-10-03"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+```{r}
+#install.packages("hdf5r")
+library(hdf5r)
+library(Seurat)
+library(SeuratData)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+```
+
+```{r}
+Spatial_dir <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Melanoma_Spatial"
+Melanoma <- Load10X_Spatial(
+  data.dir=Spatial_dir,
+  filename = "CytAssist_FFPE_Human_Skin_Melanoma_filtered_feature_bc_matrix.h5",
+  assay = "Spatial")
+```
+
+```{r}
+plot1 <- VlnPlot(Melanoma, features = "nCount_Spatial", pt.size = 0.1) + NoLegend()
+plot2 <- SpatialFeaturePlot(Melanoma, features = "nCount_Spatial") + theme(legend.position = "right")
+wrap_plots(plot1, plot2)
+
+```
+
+```{r}
+# Access the count matrix from the Spatial assay
+count_matrix <- Melanoma[["Spatial"]]@counts
+
+# Check the dimensions of the count matrix
+dim(count_matrix)
+
+```
+
+```{r}
+str(Melanoma)
+```
+```{r}
+Melanoma <- SCTransform(Melanoma, assay = "Spatial", verbose = FALSE)
+```
+
+```{r}
+SpatialFeaturePlot(Melanoma, features = c("PSMB8", "HMB45", "CD3D"))
+```
+```{r}
+library(ggplot2)
+plot <- SpatialFeaturePlot(Melanoma, features = c("PSMB8", "PSMB9", "CD3D"), alpha = c(0.1, 2), pt.size.factor = 2) + theme(legend.text = element_text(size = 0),
+    legend.title = element_text(size = 20), legend.key.size = unit(1, "cm"))
+jpeg(filename = "C:/Users/Lenovo/Desktop/Sabari Lab/Melanoma_Spatial/Output/Melanoma_spatial_vignette_PSMB.jpg", height = 700, width = 1200, quality = 300)
+print(plot)
+dev.off()
+```
+```{r}
+SpatialFeaturePlot(Melanoma, features = c("PSMB8", "PSMB9", "KLRD1"))
+```
+```{r}
+plot2 <- SpatialFeaturePlot(Melanoma, features = c("PSMB8", "PSMB9", "KLRD1"), alpha = c(0.1, 2), pt.size.factor = 2) + theme(legend.text = element_text(size = 0),
+    legend.title = element_text(size = 20), legend.key.size = unit(1, "cm"))
+jpeg(filename = "C:/Users/Lenovo/Desktop/Sabari Lab/Melanoma_Spatial/Output/Melanoma_spatial_vignette_PSMB_KLRD1.jpg", height = 700, width = 1200, quality = 300)
+print(plot2)
+dev.off()
+```
+```{r}
+SpatialFeaturePlot(Melanoma, features = c("S100B", "PSMB8",  "CD3D"))
+```
+```{r}
+plot3 <- SpatialFeaturePlot(Melanoma, features = c("PSMB8", "PSMB9", "CD3G"), alpha = c(0.1, 2), pt.size.factor = 2) + theme(legend.text = element_text(size = 0),
+    legend.title = element_text(size = 20), legend.key.size = unit(1, "cm"))
+jpeg(filename = "C:/Users/Lenovo/Desktop/Sabari Lab/Melanoma_Spatial/Output/Melanoma_spatial_vignette_PSMB_3D3G.jpg", height = 700, width = 1200, quality = 300)
+print(plot3)
+dev.off()
+```
+```{r}
+Melanoma <- RunPCA(Melanoma, assay = "SCT", verbose = FALSE)
+Melanoma <- FindNeighbors(Melanoma, reduction = "pca", dims = 1:30)
+Melanoma <- FindClusters(Melanoma, verbose = FALSE)
+Melanoma <- RunUMAP(Melanoma, reduction = "pca", dims = 1:30)
+```
+```{r}
+p1 <- DimPlot(Melanoma, reduction = "umap", label = TRUE)
+p2 <- SpatialDimPlot(Melanoma, label = TRUE, label.size = 3)
+p1 + p2
+```
+
+```{r}
+SpatialFeaturePlot(Melanoma, features = c("PSMB8"), interactive = TRUE)
+```
+
+```{r}
+SpatialFeaturePlot(Melanoma, features = c("PSMB8", "PSMB9", "HLA-A"))
+```
+
