@@ -1,0 +1,115 @@
+---
+title: "Neighborhood_Analysis_BRCA_10x"
+author: "Disha"
+date: "2023-11-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
+
+```{r}
+library(hdf5r)
+library(Seurat)
+library(SeuratData)
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+library(Matrix)
+library(rhdf5)
+library (STutility)
+```
+
+
+```{r}
+#Generating the dataframe required for loading the data
+sample_paths <- c("C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/Neighbourhood analysis/slice1/filtered_feature_bc_matrix.h5", "C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/Neighbourhood analysis/slice2/filtered_feature_bc_matrix.h5")
+spotfile_paths <- c("C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/Neighbourhood analysis/slice1/tissue_positions_list.csv", "C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/Neighbourhood analysis/slice2/tissue_positions_list.csv")
+img_paths <- c("C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/Neighbourhood analysis/slice1/tissue_hires_image.png", "C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/Neighbourhood analysis/slice2/tissue_hires_image.png")
+json_paths <- c("C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/Neighbourhood analysis/slice1/scalefactors_json.json", "C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/Neighbourhood analysis/slice2/scalefactors_json.json")
+
+# Create a data frame
+infoTable <- data.frame(
+  samples = sample_paths,
+  spotfiles = spotfile_paths,
+  imgs = img_paths,
+  json = json_paths
+)
+print(infoTable)
+```
+
+
+```{r}
+se <- InputFromTable(infotable = infoTable, 
+                      min.gene.count = 100, 
+                      min.gene.spots = 5,
+                      min.spot.count = 500,
+                      platform =  "Visium")
+```
+
+
+```{r}
+ST.FeaturePlot(se, features = c("nFeature_RNA"), cols = c("lightgray", "mistyrose", "red", "darkred", "black"), ncol = 2, pt.size = 1.3)
+```
+
+
+```{r}
+BRCA_slice1 <- RunPCA(BRCA_slice1, assay = "SCT", verbose = FALSE)
+BRCA_slice1 <- FindNeighbors(BRCA_slice1, reduction = "pca", dims = 1:30)
+BRCA_slice1 <- FindClusters(BRCA_slice1, verbose = FALSE)
+BRCA_slice1 <- RunUMAP(BRCA_slice1, reduction = "pca", dims = 1:30)
+```
+
+
+```{r}
+p1 <- DimPlot(BRCA_slice1, reduction = "umap", label = TRUE)
+p2 <- SpatialDimPlot(BRCA_slice1, label = TRUE, label.size = 3)
+p1 + p2
+```
+
+
+```{r}
+install.packages("devtools")
+```
+```{r}
+devtools::install_github("jbergenstrahle/STUtility")
+```
+```{r}
+se <- LoadImages(se, time.resolve = FALSE, verbose = TRUE)
+```
+
+
+```{r}
+se <- SCTransform(se)
+```
+```{r}
+se <- RunPCA(se, assay = "SCT", verbose = FALSE)
+se <- FindNeighbors(se, reduction = "pca", dims = 1:30)
+se <- FindClusters(se, verbose = FALSE)
+se <- RunUMAP(se, reduction = "pca", dims = 1:30)
+```
+
+
+```{r}
+FeatureOverlay(se, features = "seurat_clusters", sampleids = 1:2, ncols = 2)
+```
+
+```{r}
+se <- SetIdent(se, value = "seurat_clusters")
+se <- RegionNeighbours(se, id = "2", verbose = TRUE)
+```
+
+```{r}
+FeatureOverlay(se, features = "nbs_2", ncols = 2, sampleids = 1:2, cols = c("red", "lightgray"), pt.size = 2)
+```
+```{r}
+se$nbs_2
+```
+
