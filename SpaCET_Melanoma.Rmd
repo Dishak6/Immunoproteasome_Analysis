@@ -1,0 +1,151 @@
+---
+title: "SpaCET_Melanoma"
+author: "Disha"
+date: "2023-10-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+```{r}
+# install.packages("devtools")
+devtools::install_github("data2intelligence/SpaCET", force=TRUE)
+```
+```{r}
+install.packages("htmltools")
+```
+
+
+```{r}
+library(SpaCET)
+```
+
+```{r}
+visiumPath <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/SpaCET"
+```
+
+```{r}
+# load ST data to create an SpaCET object.
+SpaCET_obj <- create.SpaCET.object.10X(visiumPath = visiumPath)
+```
+```{r}
+remotes::install_version("htmltools", version = "0.5.7")
+```
+
+
+```{r}
+# show this object.
+str(SpaCET_obj)
+```
+```{r}
+# show this object.
+SpaCET_obj@input$counts[1:8,1:6]
+```
+
+```{r}
+# calculate the QC metrics
+SpaCET_obj <- SpaCET.quality.control(SpaCET_obj)
+
+# plot the QC metrics
+SpaCET.visualize.spatialFeature(
+  SpaCET_obj, 
+  spatialType = "QualityControl", 
+  spatialFeatures=c("UMI","Gene")
+)
+```
+```{r}
+# deconvolve ST data
+SpaCET_obj <- SpaCET.deconvolution(SpaCET_obj, cancerType="SKCM", coreNo=1)
+```
+
+```{r}
+# show the ST deconvolution results
+SpaCET_obj@results$deconvolution$propMat[1:13,1:6]
+```
+
+```{r message=TRUE, warning=TRUE}
+Matrix <- SpaCET_obj@results$deconvolution$propMat[1:1, ]
+```
+
+```{r}
+Matrix
+```
+
+
+```{r}
+#Specify the file path for the CSV
+csv_file_path <- "C:/Users/Lenovo/Desktop/Sabari_Lab/Spatial_Data_Analysis/SpaCET/deconv.csv"
+```
+
+```{r}
+# Export the matrix to a CSV file
+write.csv(Matrix, file = csv_file_path)
+```
+
+
+```{r}
+# show the spatial distribution of malignant cells and macrophages.
+SpaCET.visualize.spatialFeature(
+  SpaCET_obj, 
+  spatialType = "CellFraction", 
+  spatialFeatures=c("Malignant", "T CD8")
+)
+```
+```{r}
+# show the spatial distribution of malignant cells and macrophages.
+SpaCET.visualize.spatialFeature(
+  SpaCET_obj, 
+  spatialType = "CellFraction", 
+  spatialFeatures=c("Malignant")
+)
+```
+
+```{r}
+# calculate the cell-cell colocalization.
+SpaCET_obj <- SpaCET.CCI.colocalization(SpaCET_obj)
+
+# visualize the cell-cell colocalization.
+SpaCET.visualize.colocalization(SpaCET_obj)
+```
+
+```{r}
+# calculate the L-R network score across ST spots.
+SpaCET_obj <- SpaCET.CCI.LRNetworkScore(SpaCET_obj,coreNo=1)
+
+# visualize the L-R network score.
+SpaCET.visualize.spatialFeature(
+  SpaCET_obj, 
+  spatialType = "LRNetworkScore", 
+  spatialFeatures=c("Network_Score","Network_Score_pv")
+)
+```
+
+```{r}
+# Ligand-Receptor analysis for a co-localized cell-type pair
+SpaCET_obj <- SpaCET.CCI.cellTypePair(SpaCET_obj, cellTypePair=c("Malignant","T CD8"))
+## [1] "CAF and Macrophage M2 have potential intercellular interaction in the current tissue."
+
+# Visualize the interaction analysis of a co-localized cell-type pair.
+SpaCET.visualize.cellTypePair(SpaCET_obj, cellTypePair=c("Malignant","T CD8"))
+```
+```{r}
+# Identify the Tumor-Stroma Interface
+SpaCET_obj <- SpaCET.identify.interface(SpaCET_obj)
+
+# Visualize the Interface
+SpaCET.visualize.spatialFeature(SpaCET_obj, spatialType = "Interface")
+```
+
+```{r}
+# Compute the distance of CAF-M2 to tumor border
+SpaCET.distance.to.interface(SpaCET_obj, cellTypePair=c("Malignant","T CD8"))
+```
+
